@@ -1,0 +1,150 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wallet-label-manager
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wallet-labeler
+  namespace: wallet-label-manager
+---
+# Grant node get/list/patch permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: wallet-labeler
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wallet-labeler
+subjects:
+  - kind: ServiceAccount
+    name: wallet-labeler
+    namespace: wallet-label-manager
+roleRef:
+  kind: ClusterRole
+  name: wallet-labeler
+  apiGroup: rbac.authorization.k8s.io
+---
+# SSH private key for connecting to nodes
+# Replace with your actual key or use a sealed secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: node-ssh-key
+  namespace: wallet-label-manager
+type: Opaque
+data:
+  id_rsa: ""   # base64-encoded SSH private key
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wallet-labeler-config
+  namespace: wallet-label-manager
+data:
+  config.yaml: |
+    label:
+      key: "wallet/resource-pool"
+      value: "enabled"
+
+    search_domain:
+      enabled: true
+      expected:
+        - "example.corp.local"
+      ssh_user: "core"
+      ssh_key: "/run/secrets/ssh-key/id_rsa"
+      ssh_timeout: 10
+      connect_by: "ip"
+
+    exclude:
+      name_regex:
+        - "^infra-.*"
+      roles:
+        - "master"
+        - "control-plane"
+        - "infra"
+      labels:
+        - "wallet/exclude=true"
+
+    behavior:
+      remove_on_cordon: true
+      remove_on_bad_dns: true
+      dry_run: false
+
+    log_level: "INFO"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wallet-labeler-script
+  namespace: wallet-label-manager
+data:
+  wallet_labeler.py: |
+    # Mounted from ConfigMap — see wallet_labeler.py in the repo
+    # In production, bake into a container image instead.
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: wallet-labeler
+  namespace: wallet-label-manager
+spec:
+  schedule: "*/5 * * * *"       # Every 5 minutes — adjust as needed
+  concurrencyPolicy: Forbid     # Don't overlap runs
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 300
+      template:
+        spec:
+          serviceAccountName: wallet-labeler
+          restartPolicy: Never
+          containers:
+            - name: labeler
+              # Option A: Use a minimal Python image with oc + ssh
+              image: registry.example.com/wallet-labeler:latest
+              # Option B: Quick-start with ubi + oc already installed
+              # image: registry.redhat.io/openshift4/ose-cli:latest
+              command:
+                - python3
+                - /app/wallet_labeler.py
+                - "-c"
+                - /config/config.yaml
+              volumeMounts:
+                - name: config
+                  mountPath: /config
+                  readOnly: true
+                - name: script
+                  mountPath: /app
+                  readOnly: true
+                - name: ssh-key
+                  mountPath: /run/secrets/ssh-key
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi
+          volumes:
+            - name: config
+              configMap:
+                name: wallet-labeler-config
+            - name: script
+              configMap:
+                name: wallet-labeler-script
+            - name: ssh-key
+              secret:
+                secretName: node-ssh-key
+                defaultMode: 0400

@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: wallet-labeler
+  namespace: {{ .Values.namespace }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  concurrencyPolicy: {{ .Values.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.backoffLimit }}
+      activeDeadlineSeconds: {{ .Values.activeDeadlineSeconds }}
+      template:
+        spec:
+          serviceAccountName: wallet-labeler
+          restartPolicy: Never
+          containers:
+            - name: labeler
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - python3
+                - -m
+                - wallet_labeler
+                - "-c"
+                - /config/config.yaml
+              volumeMounts:
+                - name: config
+                  mountPath: /config
+                  readOnly: true
+                - name: script
+                  mountPath: /app
+                  readOnly: true
+                - name: ssh-key
+                  mountPath: /run/secrets/ssh-key
+                  readOnly: true
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+          volumes:
+            - name: config
+              configMap:
+                name: wallet-labeler-config
+            - name: script
+              configMap:
+                name: wallet-labeler-script
+            - name: ssh-key
+              secret:
+                secretName: node-ssh-key
+                defaultMode: 0400

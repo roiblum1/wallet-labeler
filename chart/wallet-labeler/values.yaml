@@ -1,0 +1,54 @@
+namespace: wallet-label-manager
+
+image:
+  repository: registry.example.com/wallet-labeler
+  tag: latest
+  pullPolicy: IfNotPresent
+
+schedule: "*/5 * * * *"
+concurrencyPolicy: Forbid
+successfulJobsHistoryLimit: 3
+failedJobsHistoryLimit: 5
+activeDeadlineSeconds: 300
+backoffLimit: 0
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+# base64-encoded SSH private key
+sshPrivateKey: ""
+
+config:
+  label:
+    key: "wallet/resource-pool"
+    value: "enabled"
+
+  search_domain:
+    enabled: true
+    expected:
+      - "example.corp.local"
+    ssh_user: "core"
+    ssh_key: "/run/secrets/ssh-key/id_rsa"
+    ssh_timeout: 10
+    connect_by: "ip"
+
+  exclude:
+    name_regex:
+      - "^infra-.*"
+    roles:
+      - "master"
+      - "control-plane"
+      - "infra"
+    labels:
+      - "wallet/exclude=true"
+
+  behavior:
+    remove_on_cordon: true
+    dry_run: false
+
+  log_level: "INFO"

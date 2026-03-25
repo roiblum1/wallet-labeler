@@ -1,0 +1,57 @@
+# ============================================================
+# Wallet Label Manager - Configuration
+# ============================================================
+# All customization lives here. No need to touch Python code.
+
+# --- Label to manage ---
+label:
+  key: "wallet/resource-pool"
+  value: "enabled"
+
+# --- Search domain verification via SSH ---
+search_domain:
+  # Set to false to skip SSH check entirely (label based on node state only)
+  enabled: true
+  # Expected search domain(s) - node must have ALL of these
+  expected:
+    - "example.corp.local"
+    - "apps.cluster.corp.local"
+  ssh_user: "core"
+  ssh_key: "/run/secrets/ssh-key/id_rsa"
+  # Timeout in seconds for SSH connection
+  ssh_timeout: 10
+  # How to reach nodes: "ip" uses InternalIP, "hostname" uses Hostname
+  connect_by: "ip"
+
+# --- Node exclusion rules ---
+# A node is excluded if it matches ANY rule below.
+exclude:
+  # Regex patterns matched against node name
+  name_regex:
+    - "^infra-.*"
+    # - ".*-gpu-.*"
+    # - "^special-node-0[1-3]$"
+
+  # Nodes with ANY of these node-role labels are excluded
+  roles:
+    - "master"
+    - "control-plane"
+    - "infra"
+
+  # Nodes with ANY of these label key=value pairs are excluded
+  # Use "key" alone (no =) to exclude if key exists with any value
+  labels:
+    - "wallet/exclude=true"
+    # - "node.kubernetes.io/special-purpose"
+
+# --- Behavior ---
+behavior:
+  # Remove label from unschedulable (cordoned) nodes
+  remove_on_cordon: true
+  # Remove label if search domain check fails
+  remove_on_bad_dns: true
+  # dry-run mode: log what would happen without making changes
+  dry_run: false
+
+# --- Logging ---
+log_level: "INFO"   # DEBUG, INFO, WARNING, ERROR

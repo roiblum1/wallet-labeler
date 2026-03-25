@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wallet-labeler
+description: CronJob that labels Kubernetes nodes based on SSH-verified search domain
+type: application
+version: 0.1.0
+appVersion: "latest"

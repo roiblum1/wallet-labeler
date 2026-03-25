@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wallet-labeler-config
+  namespace: {{ .Values.namespace }}
+data:
+  config.yaml: |
+    label:
+      key: {{ .Values.config.label.key | quote }}
+      value: {{ .Values.config.label.value | quote }}
+
+    search_domain:
+      enabled: {{ .Values.config.search_domain.enabled }}
+      expected:
+        {{- range .Values.config.search_domain.expected }}
+        - {{ . | quote }}
+        {{- end }}
+      ssh_user: {{ .Values.config.search_domain.ssh_user | quote }}
+      ssh_key: {{ .Values.config.search_domain.ssh_key | quote }}
+      ssh_timeout: {{ .Values.config.search_domain.ssh_timeout }}
+      connect_by: {{ .Values.config.search_domain.connect_by | quote }}
+
+    exclude:
+      name_regex:
+        {{- range .Values.config.exclude.name_regex }}
+        - {{ . | quote }}
+        {{- end }}
+      roles:
+        {{- range .Values.config.exclude.roles }}
+        - {{ . | quote }}
+        {{- end }}
+      labels:
+        {{- range .Values.config.exclude.labels }}
+        - {{ . | quote }}
+        {{- end }}
+
+    behavior:
+      remove_on_cordon: {{ .Values.config.behavior.remove_on_cordon }}
+      dry_run: {{ .Values.config.behavior.dry_run }}
+
+    log_level: {{ .Values.config.log_level | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wallet-labeler-script
+  namespace: {{ .Values.namespace }}
+data:
+  wallet_labeler.py: |
+    # Mounted from ConfigMap — see wallet_labeler.py in the repo
+    # In production, bake into a container image instead.
