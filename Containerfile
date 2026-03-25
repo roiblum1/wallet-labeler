@@ -6,9 +6,9 @@ USER 0
 RUN dnf install -y python3 python3-pyyaml openssh-clients && \
     dnf clean all
 
-COPY wallet_labeler.py /app/wallet_labeler.py
+COPY wallet_labeler/ /app/wallet_labeler/
 
 USER 1001
 
-ENTRYPOINT ["python3", "/app/wallet_labeler.py"]
+ENTRYPOINT ["python3", "-m", "wallet_labeler"]
 CMD ["-c", "/config/config.yaml"]

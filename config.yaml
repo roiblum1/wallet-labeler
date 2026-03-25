@@ -22,6 +22,11 @@ search_domain:
   ssh_timeout: 10
   # How to reach nodes: "ip" uses InternalIP, "hostname" uses Hostname
   connect_by: "ip"
+  # Interface selected by hardware vendor (DMI sys_vendor, case-insensitive substring match)
+  vendor_interfaces:
+    vmware: "ens192"     # VMware, Inc.
+    red hat: "eth0"      # Red Hat / oVirt / RHEV
+    default: "bond0"     # bare metal or unknown
 
 # --- Node exclusion rules ---
 # A node is excluded if it matches ANY rule below.
@@ -48,8 +53,6 @@ exclude:
 behavior:
   # Remove label from unschedulable (cordoned) nodes
   remove_on_cordon: true
-  # Remove label if search domain check fails
-  remove_on_bad_dns: true
   # dry-run mode: log what would happen without making changes
   dry_run: false
 
