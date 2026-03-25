@@ -19,6 +19,10 @@ data:
       ssh_key: {{ .Values.config.search_domain.ssh_key | quote }}
       ssh_timeout: {{ .Values.config.search_domain.ssh_timeout }}
       connect_by: {{ .Values.config.search_domain.connect_by | quote }}
+      vendor_interfaces:
+        {{- range $vendor, $iface := .Values.config.search_domain.vendor_interfaces }}
+        {{ $vendor | quote }}: {{ $iface | quote }}
+        {{- end }}
 
     exclude:
       name_regex:

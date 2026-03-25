@@ -36,6 +36,10 @@ config:
     ssh_key: "/run/secrets/ssh-key/id_rsa"
     ssh_timeout: 10
     connect_by: "ip"
+    vendor_interfaces:
+      vmware: "ens192"
+      red hat: "eth0"
+      default: "bond0"
 
   exclude:
     name_regex:
